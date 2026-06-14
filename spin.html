@@ -163,18 +163,22 @@
 
 <script>
 const SEGMENTS = [
-  { label: '250 GDS',    color: '#003399', amount: 250,   type: 'win' },
-  { label: 'Bonne chance', color: '#001a4d', amount: 0,  type: 'msg' },
-  { label: '500 GDS',    color: '#0044aa', amount: 500,   type: 'win' },
-  { label: 'Essaie encore', color: '#002266', amount: 0, type: 'msg' },
-  { label: '1000 GDS',   color: '#0055cc', amount: 1000,  type: 'win' },
-  { label: 'Oups',       color: '#001133', amount: 0,     type: 'msg' },
-  { label: '2500 GDS',   color: '#0066dd', amount: 2500,  type: 'win' },
-  { label: 'Tour gratuit', color: '#007799', amount: 0,   type: 'free' },
-  { label: '5000 GDS',   color: '#0077ee', amount: 5000,  type: 'win' },
-  { label: 'Bonne chance', color: '#001a4d', amount: 0,   type: 'msg' },
-  { label: '10000 GDS',  color: '#0088ff', amount: 10000, type: 'win' },
-  { label: '25000 GDS',  color: '#00aaff', amount: 25000, type: 'win' },
+  { label: '250 GDS',         color: '#003399', amount: 250,   type: 'win'   },
+  { label: 'Bonne chance',    color: '#001a4d', amount: 0,     type: 'msg'   },
+  { label: '10 GDS',          color: '#0044aa', amount: 10,    type: 'win'   },
+  { label: 'Essaie encore',   color: '#002266', amount: 0,     type: 'msg'   },
+  { label: '1000 GDS',        color: '#0055cc', amount: 1000,  type: 'win'   },
+  { label: 'Focus',           color: '#001133', amount: 0,     type: 'msg'   },
+  { label: '2500 GDS',        color: '#0066dd', amount: 2500,  type: 'win'   },
+  { label: 'Tour gratuit',    color: '#007799', amount: 0,     type: 'free'  },
+  { label: '15 GDS',          color: '#0077ee', amount: 15,    type: 'win'   },
+  { label: 'Oups',            color: '#001a4d', amount: 0,     type: 'msg'   },
+  { label: 'Smartphone',      color: '#0088ff', amount: 0,     type: 'prize' },
+  { label: 'Kont TikTok 10K', color: '#00aaff', amount: 0,    type: 'prize' },
+  { label: '10000 GDS',       color: '#005599', amount: 10000, type: 'win'   },
+  { label: '25000 GDS',       color: '#004488', amount: 25000, type: 'win'   },
+  { label: 'Bonne chance',    color: '#001a4d', amount: 0,     type: 'msg'   },
+  { label: '5000 GDS',        color: '#003377', amount: 5000,  type: 'win'   },
 ];
 
 const SPIN_COST = 25;
@@ -219,19 +223,16 @@ function drawWheel(angle) {
 drawWheel(0);
 
 function getWeightedResult() {
-  // Win segments have lower probability (5%), msg segments ~15%, free 10%
   const weights = SEGMENTS.map(s => {
-    if (s.amount >= 25000) return 1;
-    if (s.amount >= 10000) return 2;
-    if (s.amount >= 5000) return 4;
-    if (s.amount >= 2500) return 6;
-    if (s.amount >= 1000) return 8;
-    if (s.amount >= 500) return 10;
-    if (s.amount >= 250) return 12;
-    if (s.type === 'free') return 8;
-    return 20; // msg
+    if (s.type === 'msg')            return 15;  // 60% reparti sur les msg
+    if (s.type === 'free')           return 5;   // 5% tour gratuit
+    if (s.amount === 15)             return 8;   // ~20%
+    if (s.amount === 10)             return 7;   // ~18%
+    if (s.type === 'prize')          return 0;   // Smartphone / TikTok : jamais
+    // Tous les gros gains (250, 1000, 2500, 5000, 10000, 25000) : 0%
+    return 0;
   });
-  const total = weights.reduce((a,b)=>a+b,0);
+  const total = weights.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
   for (let i = 0; i < SEGMENTS.length; i++) {
     r -= weights[i];
@@ -279,7 +280,6 @@ async function doSpin() {
 
   const winIdx = getWeightedResult();
   const arc = 360 / N;
-  // Target angle: spin multiple full rotations, land on segment
   const targetSegDeg = winIdx * arc + arc / 2;
   const extraSpins = 5 + Math.floor(Math.random() * 3);
   const totalDeg = extraSpins * 360 + (360 - targetSegDeg);
@@ -298,7 +298,6 @@ async function doSpin() {
     drawWheel(angle);
     currentAngle = angle;
     if (t < 1) { requestAnimationFrame(animate); return; }
-    // Done
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
     showResult(winIdx);
@@ -339,7 +338,13 @@ async function showResult(idx) {
     msg.textContent = 'Votre prochain spin est gratuit !';
     freeSpin = true;
     document.getElementById('free-spin-badge').classList.remove('hidden');
+  } else if (seg.type === 'prize') {
+    icon.textContent = '🎁';
+    title.textContent = seg.label;
+    amount.textContent = seg.label;
+    msg.textContent = "Contactez l'admin pour récupérer votre prix !";
   } else {
+    // msg : Bonne chance, Essaie encore, Oups, Focus
     icon.textContent = '😔';
     title.textContent = seg.label;
     amount.textContent = '';
