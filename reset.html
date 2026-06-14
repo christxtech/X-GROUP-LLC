@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset Mot de Passe — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Réinitialisation du mot de passe</p>
+</header>
+
+<main class="container-sm">
+  <div class="card">
+    <h2 style="color:var(--blue); font-size:1.1rem; margin-bottom:20px;">🔑 Réinitialiser votre mot de passe</h2>
+    <div id="reset-alert"></div>
+
+    <div class="form-group">
+      <label for="reset-username">Nom d'utilisateur</label>
+      <input type="text" id="reset-username" placeholder="mon_pseudo" autocomplete="username">
+    </div>
+
+    <div class="form-group">
+      <label for="reset-new-pw">Nouveau mot de passe</label>
+      <input type="password" id="reset-new-pw" placeholder="••••••••" autocomplete="new-password">
+    </div>
+
+    <div class="form-group">
+      <label for="reset-confirm-pw">Confirmer le nouveau mot de passe</label>
+      <input type="password" id="reset-confirm-pw" placeholder="••••••••" autocomplete="new-password">
+    </div>
+
+    <button class="btn btn-primary w-full" onclick="resetPassword()">🔄 Réinitialiser</button>
+
+    <p style="text-align:center; margin-top:16px; font-size:0.85rem; color:var(--text-muted);">
+      <a href="social.html" style="color:var(--blue);">← Retour à la connexion</a>
+    </p>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+async function resetPassword() {
+  const alertEl = document.getElementById('reset-alert');
+  alertEl.innerHTML = '';
+
+  const username = document.getElementById('reset-username').value.trim();
+  const newPw = document.getElementById('reset-new-pw').value;
+  const confirmPw = document.getElementById('reset-confirm-pw').value;
+
+  if (!username || !newPw || !confirmPw) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez remplir tous les champs.</div>';
+    return;
+  }
+  if (newPw !== confirmPw) {
+    alertEl.innerHTML = '<div class="alert alert-error">Les mots de passe ne correspondent pas.</div>';
+    return;
+  }
+  if (newPw.length < 4) {
+    alertEl.innerHTML = '<div class="alert alert-error">Le mot de passe doit contenir au moins 4 caractères.</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/users?action=reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, newPassword: newPw })
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      alertEl.innerHTML = '<div class="alert alert-success">✅ Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter.</div>';
+      document.getElementById('reset-username').value = '';
+      document.getElementById('reset-new-pw').value = '';
+      document.getElementById('reset-confirm-pw').value = '';
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur lors de la réinitialisation.'}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau. Réessayez.</div>';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') resetPassword(); });
+</script>
+</body>
+</html>

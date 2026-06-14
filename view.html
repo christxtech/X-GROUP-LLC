@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChristView — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border-bottom: 1px solid rgba(0, 170, 255, 0.25);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.view-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fff, #00aaff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.view-nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.view-nav a {
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.view-nav a:hover, .view-nav a.active {
+  color: #00aaff;
+  border-color: #00aaff;
+  background: rgba(0,170,255,0.1);
+}
+.iframe-wrap {
+  flex: 1;
+  position: relative;
+}
+.iframe-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+body { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="view-header">
+  <div class="view-title">XGROUP LLC — ChristView</div>
+  <nav class="view-nav">
+    <a href="index.html">Accueil</a>
+    <a href="social.html">Social</a>
+    <a href="spin.html">Spin</a>
+    <a href="links.html">Liens</a>
+    <a href="payment.html">Paiement</a>
+    <a href="withdraw.html">Retrait</a>
+    <a href="view.html" class="active">ChristView</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+</div>
+
+<div class="iframe-wrap">
+  <iframe src="https://bommersitev12.vercel.app/"
+          title="ChristView"
+          allowfullscreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+  </iframe>
+</div>
+</body>
+</html>

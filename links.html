@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Échange de Liens — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.link-card {
+  display:flex; align-items:center; gap:12px; padding:14px;
+  border-radius:12px; background:rgba(0,30,60,0.6);
+  border:1px solid var(--card-border); margin-bottom:10px;
+  transition:border-color 0.2s;
+}
+.link-card:hover { border-color:var(--blue); }
+.platform-icon { font-size:1.8rem; flex-shrink:0; }
+.link-info { flex:1; min-width:0; }
+.link-url { font-size:0.82rem; color:var(--blue); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.click-btn { flex-shrink:0; }
+.clicked-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72rem; background:rgba(0,221,136,0.2); color:var(--success); border:1px solid var(--success); }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html" class="active">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>🔗 Échange de Liens Sociaux</p>
+</header>
+
+<main class="container">
+  <div class="grid-2">
+    <!-- PUBLISH FORM -->
+    <div>
+      <div class="card">
+        <h2 style="color:var(--blue); font-size:1.1rem; margin-bottom:16px;">📤 Publier mon lien</h2>
+        <div id="publish-alert"></div>
+        <div class="form-group">
+          <label>Plateforme</label>
+          <select id="link-platform">
+            <option value="">-- Choisir --</option>
+            <option value="WhatsApp Chaîne">📢 WhatsApp Chaîne</option>
+            <option value="Facebook">📘 Facebook</option>
+            <option value="TikTok">🎵 TikTok</option>
+            <option value="Instagram">📸 Instagram</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>URL de votre compte</label>
+          <input type="url" id="link-url" placeholder="https://www.tiktok.com/@moncompte">
+        </div>
+        <div id="click-requirement" class="alert alert-info" style="font-size:0.82rem;">
+          ⚠️ Vous devez cliquer sur <strong>au moins un lien existant</strong> avant de publier le vôtre.
+        </div>
+        <button class="btn btn-primary w-full mt-8" onclick="publishLink()" id="publish-btn" disabled>
+          📤 Publier mon lien
+        </button>
+      </div>
+    </div>
+
+    <!-- LINKS LIST -->
+    <div>
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 style="color:var(--blue); font-size:1.1rem;">🌐 Liens publiés</h2>
+          <span id="links-count" class="badge badge-blue">0</span>
+        </div>
+        <div id="links-list">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+let clickedAtLeastOne = false;
+let allLinks = [];
+
+const PLATFORM_ICONS = {
+  'WhatsApp Chaîne': '📢',
+  'Facebook': '📘',
+  'TikTok': '🎵',
+  'Instagram': '📸',
+};
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function onLinkClick(url, id) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+  clickedAtLeastOne = true;
+  document.getElementById('publish-btn').disabled = false;
+  document.getElementById('click-requirement').innerHTML = '✅ Merci ! Vous pouvez maintenant publier votre lien.';
+  document.getElementById('click-requirement').className = 'alert alert-success';
+  // Mark as clicked visually
+  const badge = document.getElementById('clicked-' + id);
+  if (badge) badge.innerHTML = '<span class="clicked-badge">✓ Visité</span>';
+}
+
+async function loadLinks() {
+  try {
+    const res = await fetch('/api/links');
+    allLinks = await res.json();
+    const el = document.getElementById('links-list');
+    document.getElementById('links-count').textContent = allLinks.length;
+    if (!allLinks.length) {
+      el.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Aucun lien publié pour l\'instant. Soyez le premier !</p>';
+      document.getElementById('publish-btn').disabled = false;
+      document.getElementById('click-requirement').className = 'hidden';
+      return;
+    }
+    el.innerHTML = allLinks.slice().reverse().map(l => {
+      const icon = PLATFORM_ICONS[l.platform] || '🔗';
+      return `<div class="link-card">
+        <div class="platform-icon">${icon}</div>
+        <div class="link-info">
+          <div style="font-weight:600; font-size:0.85rem;">${esc(l.platform)}</div>
+          <div class="link-url">${esc(l.url)}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted);">${fmtDate(l.createdAt)}</div>
+        </div>
+        <div id="clicked-${l.id}" class="click-btn">
+          <button class="btn btn-secondary" style="padding:8px 14px; font-size:0.78rem;" onclick="onLinkClick('${esc(l.url)}', '${l.id}')">
+            👆 Visiter
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    document.getElementById('links-list').innerHTML = '<p style="color:var(--danger)">Erreur de chargement.</p>';
+  }
+}
+
+async function publishLink() {
+  const platform = document.getElementById('link-platform').value;
+  const url = document.getElementById('link-url').value.trim();
+  const alertEl = document.getElementById('publish-alert');
+
+  if (!platform) { alertEl.innerHTML = '<div class="alert alert-error">Choisissez une plateforme.</div>'; return; }
+  if (!url) { alertEl.innerHTML = '<div class="alert alert-error">Entrez l\'URL de votre compte.</div>'; return; }
+  if (!url.startsWith('http')) { alertEl.innerHTML = '<div class="alert alert-error">L\'URL doit commencer par http:// ou https://</div>'; return; }
+  if (!clickedAtLeastOne && allLinks.length > 0) {
+    alertEl.innerHTML = '<div class="alert alert-error">⚠️ Vous devez d\'abord cliquer sur au moins un lien existant.</div>';
+    return;
+  }
+
+  const currentUser = JSON.parse(sessionStorage.getItem('socialUser') || '{}');
+
+  try {
+    const res = await fetch('/api/links', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform, url, username: currentUser.username || 'anonyme' })
+    });
+    if (res.ok) {
+      alertEl.innerHTML = '<div class="alert alert-success">✅ Lien publié avec succès !</div>';
+      document.getElementById('link-platform').value = '';
+      document.getElementById('link-url').value = '';
+      loadLinks();
+    } else {
+      const data = await res.json();
+      alertEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+  }
+}
+
+loadLinks();
+</script>
+</body>
+</html>

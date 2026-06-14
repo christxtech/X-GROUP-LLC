@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiement — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html" class="active">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Dépôt de fonds — Envoyez votre screenshot de paiement</p>
+</header>
+
+<main class="container-sm">
+
+  <!-- NOT LOGGED IN -->
+  <div id="login-prompt" class="card text-center hidden">
+    <div style="font-size:3rem; margin-bottom:12px;">💳</div>
+    <h2 style="color:var(--blue); margin-bottom:8px;">Connexion requise</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Connectez-vous pour soumettre un paiement</p>
+    <a href="social.html" class="btn btn-primary">Se connecter</a>
+  </div>
+
+  <!-- LOGGED IN -->
+  <div id="payment-section" class="hidden">
+
+    <!-- Payment methods info -->
+    <div class="card mb-16">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:14px;">💸 Méthodes de Paiement</h3>
+      <div id="payment-methods-list" style="font-size:0.9rem; color:var(--text-muted);">Chargement...</div>
+    </div>
+
+    <!-- Upload form -->
+    <div class="card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">📤 Soumettre un paiement</h3>
+      <div id="pay-alert"></div>
+
+      <div class="form-group">
+        <label for="pay-screenshot">Screenshot de paiement (JPG/PNG, max 2 Mo)</label>
+        <input type="file" id="pay-screenshot" accept="image/jpeg,image/png,image/gif,image/webp" required>
+      </div>
+
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        <strong>FR :</strong> Nous nous réservons le droit de prendre des mesures en cas d'abus ou de fraude.<br>
+        <strong>EN :</strong> We reserve the right to take action in cases of abuse or fraud.
+        <br><br>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text); font-size:0.85rem;">
+          <input type="checkbox" id="age-confirm" style="width:auto;">
+          I confirm that I am at least 18 years old.
+        </label>
+      </div>
+
+      <button class="btn btn-primary w-full" onclick="submitPayment()">📨 Envoyer le paiement</button>
+    </div>
+
+    <!-- History -->
+    <div class="card mt-16">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:12px;">📋 Mes paiements soumis</h3>
+      <div id="pay-history" style="color:var(--text-muted); font-size:0.85rem;">Chargement...</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+let currentUser = null;
+
+const saved = sessionStorage.getItem('socialUser');
+if (saved) {
+  currentUser = JSON.parse(saved);
+  document.getElementById('payment-section').classList.remove('hidden');
+  loadPaymentMethods();
+  loadHistory();
+} else {
+  document.getElementById('login-prompt').classList.remove('hidden');
+}
+
+async function loadPaymentMethods() {
+  try {
+    const res = await fetch('/payments.json');
+    const data = await res.json();
+    const el = document.getElementById('payment-methods-list');
+    const methods = [];
+    if (data.moncash) methods.push(`<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06);">📱 <strong style="color:var(--text)">MonCash</strong> → <span style="color:var(--blue)">${esc(data.moncash)}</span></div>`);
+    if (data.natcash) methods.push(`<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06);">📱 <strong style="color:var(--text)">NatCash</strong> → <span style="color:var(--blue)">${esc(data.natcash)}</span></div>`);
+    if (data.zelle) methods.push(`<div style="padding:8px 0;">💵 <strong style="color:var(--text)">Zelle</strong> → <span style="color:var(--blue)">${esc(data.zelle)}</span></div>`);
+    if (!methods.length) {
+      el.innerHTML = '<p>Contactez l\'admin pour les coordonnées de paiement.</p>';
+    } else {
+      el.innerHTML = methods.join('');
+    }
+  } catch {
+    document.getElementById('payment-methods-list').textContent = 'Impossible de charger les méthodes.';
+  }
+}
+
+async function submitPayment() {
+  const alertEl = document.getElementById('pay-alert');
+  alertEl.innerHTML = '';
+
+  const fileInput = document.getElementById('pay-screenshot');
+  const ageCheck = document.getElementById('age-confirm');
+
+  if (!ageCheck.checked) {
+    alertEl.innerHTML = '<div class="alert alert-error">Vous devez confirmer avoir au moins 18 ans.</div>';
+    return;
+  }
+  if (!fileInput.files || !fileInput.files[0]) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez sélectionner un screenshot.</div>';
+    return;
+  }
+
+  const file = fileInput.files[0];
+  if (file.size > 2 * 1024 * 1024) {
+    alertEl.innerHTML = '<div class="alert alert-error">Image trop volumineuse (max 2 Mo).</div>';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const imageData = e.target.result;
+    try {
+      const res = await fetch('/api/payments?action=submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, imageData })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        alertEl.innerHTML = '<div class="alert alert-success">✅ Paiement soumis ! En attente de validation par l\'admin.</div>';
+        fileInput.value = '';
+        ageCheck.checked = false;
+        loadHistory();
+      } else {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur lors de la soumission.'}</div>`;
+      }
+    } catch {
+      alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau. Réessayez.</div>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`/api/payments?action=list&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+    const el = document.getElementById('pay-history');
+    if (!data.length) { el.textContent = 'Aucun paiement soumis.'; return; }
+    el.innerHTML = data.map(p => {
+      const statusBadge = p.status === 'approved'
+        ? `<span class="badge badge-green">Approuvé${p.approvedAmount ? ' — ' + p.approvedAmount + ' GDS' : ''}</span>`
+        : p.status === 'refused'
+        ? '<span class="badge badge-red">Refusé</span>'
+        : '<span class="badge badge-muted">En attente</span>';
+      return `<div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <small style="color:var(--text-muted)">${fmtDate(p.createdAt)}</small>
+        ${statusBadge}
+      </div>`;
+    }).join('');
+  } catch { document.getElementById('pay-history').textContent = 'Impossible de charger.'; }
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleString('fr-FR', { dateStyle:'short', timeStyle:'short' });
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

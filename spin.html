@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.spin-container { text-align:center; }
+.wheel-wrap { position:relative; display:inline-block; margin:24px auto; }
+.wheel {
+  width:320px; height:320px; border-radius:50%;
+  position:relative;
+  border:6px solid var(--blue);
+  box-shadow:0 0 30px var(--blue-glow), 0 0 60px rgba(0,100,200,0.2);
+  overflow:hidden;
+  transition:transform 5s cubic-bezier(0.17,0.67,0.12,0.99);
+}
+.wheel-pointer {
+  position:absolute; top:-22px; left:50%;
+  transform:translateX(-50%);
+  width:0; height:0;
+  border-left:14px solid transparent;
+  border-right:14px solid transparent;
+  border-top:28px solid #fff;
+  z-index:10;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+.wheel-center {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:50px; height:50px; border-radius:50%;
+  background:linear-gradient(135deg,#001133,var(--blue));
+  border:3px solid var(--blue);
+  z-index:5;
+  box-shadow:0 0 20px var(--blue-glow);
+}
+.segment {
+  position:absolute; width:0; height:0;
+  top:50%; left:50%;
+  transform-origin:0 0;
+}
+.segment-label {
+  position:absolute;
+  transform-origin:0 0;
+  font-size:0.68rem;
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  white-space:nowrap;
+  pointer-events:none;
+}
+.balance-display {
+  font-size:2rem; font-weight:700;
+  color:var(--blue);
+  text-shadow:0 0 20px var(--blue-glow);
+}
+.result-modal {
+  position:fixed; inset:0; background:rgba(0,0,0,0.8);
+  display:flex; align-items:center; justify-content:center;
+  z-index:100;
+}
+.result-box {
+  background:var(--card); border:2px solid var(--blue);
+  border-radius:20px; padding:32px; text-align:center;
+  max-width:340px; width:90%;
+  box-shadow:0 0 40px var(--blue-glow);
+}
+.result-amount { font-size:2.5rem; font-weight:800; color:var(--blue); margin:12px 0; }
+.withdraw-info { background:rgba(0,170,255,0.08); border:1px solid var(--card-border); border-radius:12px; padding:16px; margin-top:16px; text-align:left; }
+.withdraw-info h4 { color:var(--blue); margin-bottom:8px; font-size:0.9rem; }
+.withdraw-info p { font-size:0.82rem; color:var(--text-muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html" class="active">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>🎰 Jeu de Spin — Gagnez jusqu'à 25 000 GDS !</p>
+</header>
+
+<main class="container">
+
+  <!-- LOGIN PROMPT -->
+  <div id="spin-login" class="container-sm" style="margin:0 auto;">
+    <div class="card text-center">
+      <div style="font-size:3rem; margin-bottom:12px;">🎰</div>
+      <h2 style="color:var(--blue); margin-bottom:8px;">Jeu de Spin</h2>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Connectez-vous pour jouer</p>
+      <a href="social.html" class="btn btn-primary">Connexion / Inscription</a>
+    </div>
+  </div>
+
+  <!-- SPIN GAME -->
+  <div id="spin-game" class="hidden">
+    <!-- Balance -->
+    <div class="card text-center mb-16">
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Votre solde</div>
+      <div class="balance-display"><span id="balance-val">0</span> GDS</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); margin-top:6px;">Chaque spin coûte <strong style="color:var(--blue)">25 GDS</strong></div>
+      <div id="free-spin-badge" class="badge badge-green mt-8 hidden">🎁 Prochain spin GRATUIT !</div>
+    </div>
+
+    <!-- Wheel -->
+    <div class="card spin-container">
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel-canvas" width="320" height="320" style="border-radius:50%; display:block;"></canvas>
+        <div class="wheel-center"></div>
+      </div>
+      <div id="spin-alert" class="mt-8"></div>
+      <button id="spin-btn" class="btn btn-primary mt-16" style="font-size:1rem; padding:14px 40px;" onclick="doSpin()">
+        🎰 LANCER LE SPIN
+      </button>
+      <p style="font-size:0.78rem; color:var(--text-muted); margin-top:8px;">Joueur: <strong id="spin-username">—</strong></p>
+    </div>
+
+    <!-- History -->
+    <div class="card mt-16">
+      <h3 style="color:var(--blue); font-size:0.9rem; margin-bottom:12px;">📜 Mon historique</h3>
+      <div class="table-wrap">
+        <table><thead><tr><th>Date</th><th>Résultat</th><th>Montant</th></tr></thead>
+        <tbody id="spin-history"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Withdraw -->
+    <div class="card mt-16 withdraw-info">
+      <h4>💸 Méthodes de Retrait</h4>
+      <p>• Zelle</p>
+      <p>• MonCash</p>
+      <p>• NatCash</p>
+      <p>• Mains propres</p>
+      <p style="margin-top:8px; color:var(--blue);">Pour retirer vos gains :</p>
+      <a href="withdraw.html" class="btn btn-primary" style="margin-top:8px; display:inline-flex; padding:10px 20px; font-size:0.85rem;">💸 Faire une demande de retrait</a>
+    </div>
+  </div>
+</main>
+
+<!-- Result Modal -->
+<div id="result-modal" class="result-modal hidden">
+  <div class="result-box">
+    <div style="font-size:2.5rem;" id="result-icon">🎰</div>
+    <h3 style="margin-top:8px;" id="result-title">Résultat</h3>
+    <div class="result-amount" id="result-amount"></div>
+    <p id="result-msg" style="color:var(--text-muted); font-size:0.9rem;"></p>
+    <button class="btn btn-primary mt-16 w-full" onclick="closeResult()">Continuer</button>
+  </div>
+</div>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+const SEGMENTS = [
+  { label: '250 GDS',    color: '#003399', amount: 250,   type: 'win' },
+  { label: 'Bonne chance', color: '#001a4d', amount: 0,  type: 'msg' },
+  { label: '500 GDS',    color: '#0044aa', amount: 500,   type: 'win' },
+  { label: 'Essaie encore', color: '#002266', amount: 0, type: 'msg' },
+  { label: '1000 GDS',   color: '#0055cc', amount: 1000,  type: 'win' },
+  { label: 'Oups',       color: '#001133', amount: 0,     type: 'msg' },
+  { label: '2500 GDS',   color: '#0066dd', amount: 2500,  type: 'win' },
+  { label: 'Tour gratuit', color: '#007799', amount: 0,   type: 'free' },
+  { label: '5000 GDS',   color: '#0077ee', amount: 5000,  type: 'win' },
+  { label: 'Bonne chance', color: '#001a4d', amount: 0,   type: 'msg' },
+  { label: '10000 GDS',  color: '#0088ff', amount: 10000, type: 'win' },
+  { label: '25000 GDS',  color: '#00aaff', amount: 25000, type: 'win' },
+];
+
+const SPIN_COST = 25;
+let currentUser = null;
+let isSpinning = false;
+let freeSpin = false;
+let currentAngle = 0;
+const canvas = document.getElementById('wheel-canvas');
+const ctx = canvas.getContext('2d');
+const N = SEGMENTS.length;
+
+function drawWheel(angle) {
+  ctx.clearRect(0, 0, 320, 320);
+  const cx = 160, cy = 160, r = 158;
+  const arc = (2 * Math.PI) / N;
+  for (let i = 0; i < N; i++) {
+    const start = angle + i * arc - Math.PI / 2;
+    const end = start + arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = SEGMENTS[i].color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,170,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Label
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px Poppins, sans-serif';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 4;
+    ctx.fillText(SEGMENTS[i].label, r - 10, 4);
+    ctx.restore();
+  }
+}
+
+drawWheel(0);
+
+function getWeightedResult() {
+  // Win segments have lower probability (5%), msg segments ~15%, free 10%
+  const weights = SEGMENTS.map(s => {
+    if (s.amount >= 25000) return 1;
+    if (s.amount >= 10000) return 2;
+    if (s.amount >= 5000) return 4;
+    if (s.amount >= 2500) return 6;
+    if (s.amount >= 1000) return 8;
+    if (s.amount >= 500) return 10;
+    if (s.amount >= 250) return 12;
+    if (s.type === 'free') return 8;
+    return 20; // msg
+  });
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random() * total;
+  for (let i = 0; i < SEGMENTS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return i;
+  }
+  return SEGMENTS.length - 1;
+}
+
+async function doSpin() {
+  if (isSpinning) return;
+  if (!currentUser) return;
+  const alertEl = document.getElementById('spin-alert');
+  alertEl.innerHTML = '';
+
+  if (!freeSpin) {
+    const bal = parseInt(document.getElementById('balance-val').textContent);
+    if (bal < SPIN_COST) {
+      alertEl.innerHTML = '<div class="alert alert-error">Solde insuffisant (minimum 25 GDS requis).</div>';
+      return;
+    }
+    // Debit
+    try {
+      const res = await fetch('/api/users?action=debit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, amount: SPIN_COST })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        return;
+      }
+      document.getElementById('balance-val').textContent = data.balance;
+      currentUser.balance = data.balance;
+    } catch {
+      alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+      return;
+    }
+  } else {
+    freeSpin = false;
+    document.getElementById('free-spin-badge').classList.add('hidden');
+  }
+
+  isSpinning = true;
+  document.getElementById('spin-btn').disabled = true;
+
+  const winIdx = getWeightedResult();
+  const arc = 360 / N;
+  // Target angle: spin multiple full rotations, land on segment
+  const targetSegDeg = winIdx * arc + arc / 2;
+  const extraSpins = 5 + Math.floor(Math.random() * 3);
+  const totalDeg = extraSpins * 360 + (360 - targetSegDeg);
+  const totalRad = (totalDeg * Math.PI) / 180;
+
+  const startAngle = currentAngle;
+  const duration = 5000;
+  const startTime = performance.now();
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const angle = startAngle + totalRad * easeOut(t);
+    drawWheel(angle);
+    currentAngle = angle;
+    if (t < 1) { requestAnimationFrame(animate); return; }
+    // Done
+    isSpinning = false;
+    document.getElementById('spin-btn').disabled = false;
+    showResult(winIdx);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+async function showResult(idx) {
+  const seg = SEGMENTS[idx];
+  const modal = document.getElementById('result-modal');
+  const icon = document.getElementById('result-icon');
+  const title = document.getElementById('result-title');
+  const amount = document.getElementById('result-amount');
+  const msg = document.getElementById('result-msg');
+
+  if (seg.type === 'win') {
+    icon.textContent = '🏆';
+    title.textContent = 'Félicitations !';
+    amount.textContent = seg.label;
+    msg.textContent = `Vous avez gagné ${seg.amount} GDS ! Contactez l'admin pour retirer.`;
+    // Credit winnings
+    try {
+      const res = await fetch('/api/users?action=credit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, amount: seg.amount })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('balance-val').textContent = data.balance;
+        currentUser.balance = data.balance;
+      }
+    } catch {}
+  } else if (seg.type === 'free') {
+    icon.textContent = '🎁';
+    title.textContent = 'Tour Gratuit !';
+    amount.textContent = '🎰';
+    msg.textContent = 'Votre prochain spin est gratuit !';
+    freeSpin = true;
+    document.getElementById('free-spin-badge').classList.remove('hidden');
+  } else {
+    icon.textContent = '😔';
+    title.textContent = seg.label;
+    amount.textContent = '';
+    msg.textContent = 'Meilleure chance la prochaine fois !';
+  }
+
+  // Save spin history
+  await fetch('/api/spins', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: currentUser.username, resultType: seg.label, amount: seg.amount })
+  });
+
+  modal.classList.remove('hidden');
+  loadHistory();
+}
+
+function closeResult() {
+  document.getElementById('result-modal').classList.add('hidden');
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`/api/spins?username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+    const tbody = document.getElementById('spin-history');
+    const recent = data.slice(-10).reverse();
+    tbody.innerHTML = recent.map(s => {
+      const isWin = s.amount > 0;
+      return `<tr>
+        <td style="font-size:0.78rem;">${new Date(s.createdAt).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}</td>
+        <td>${s.resultType}</td>
+        <td>${isWin ? `<span style="color:var(--success)">${s.amount} GDS</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Aucun spin.</td></tr>';
+  } catch {}
+}
+
+async function loadBalance() {
+  try {
+    const res = await fetch(`/api/users?action=balance&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+    document.getElementById('balance-val').textContent = data.balance;
+    currentUser.balance = data.balance;
+  } catch {}
+}
+
+// Init
+const saved = sessionStorage.getItem('socialUser');
+if (saved) {
+  currentUser = JSON.parse(saved);
+  document.getElementById('spin-login').classList.add('hidden');
+  document.getElementById('spin-game').classList.remove('hidden');
+  document.getElementById('spin-username').textContent = currentUser.username;
+  loadBalance();
+  loadHistory();
+}
+</script>
+</body>
+</html>

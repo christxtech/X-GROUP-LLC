@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retrait — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html" class="active">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Demande de retrait — Retirez vos gains</p>
+</header>
+
+<main class="container-sm">
+
+  <!-- NOT LOGGED IN -->
+  <div id="login-prompt" class="card text-center hidden">
+    <div style="font-size:3rem; margin-bottom:12px;">💸</div>
+    <h2 style="color:var(--blue); margin-bottom:8px;">Connexion requise</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Connectez-vous pour faire une demande de retrait</p>
+    <a href="social.html" class="btn btn-primary">Se connecter</a>
+  </div>
+
+  <!-- LOGGED IN -->
+  <div id="withdraw-section" class="hidden">
+
+    <!-- Balance -->
+    <div class="card mb-16 text-center">
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">Votre solde disponible</div>
+      <div style="font-size:2rem; font-weight:700; color:var(--blue);"><span id="balance-val">0</span> GDS</div>
+    </div>
+
+    <!-- Withdraw form -->
+    <div class="card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">💸 Nouvelle demande de retrait</h3>
+      <div id="wd-alert"></div>
+
+      <div class="form-group">
+        <label for="wd-amount">Montant (GDS)</label>
+        <input type="number" id="wd-amount" placeholder="500" min="1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="wd-method">Méthode de retrait</label>
+        <select id="wd-method" required onchange="updateContactLabel()">
+          <option value="">-- Choisir une méthode --</option>
+          <option value="moncash">MonCash (37081286)</option>
+          <option value="natcash">NatCash (40879576)</option>
+          <option value="zelle">Zelle</option>
+          <option value="mains_propres">Mains propres</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="wd-contact" id="wd-contact-label">Votre numéro / contact</label>
+        <input type="text" id="wd-contact" placeholder="Numéro MonCash / Zelle / Adresse" required>
+      </div>
+
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        ⏱️ Délai de traitement : <strong>Instant to 24h</strong>
+        <br><br>
+        <strong>FR :</strong> Nous nous réservons le droit de prendre des mesures en cas d'abus ou de fraude.<br>
+        <strong>EN :</strong> We reserve the right to take action in cases of abuse or fraud.
+        <br><br>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text); font-size:0.85rem;">
+          <input type="checkbox" id="age-confirm" style="width:auto;">
+          I confirm that I am at least 18 years old.
+        </label>
+      </div>
+
+      <button class="btn btn-primary w-full" onclick="submitWithdraw()">📨 Soumettre la demande</button>
+    </div>
+
+    <!-- History -->
+    <div class="card mt-16">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:12px;">📋 Mes demandes de retrait</h3>
+      <div id="wd-history" style="color:var(--text-muted); font-size:0.85rem;">Chargement...</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+let currentUser = null;
+
+const saved = sessionStorage.getItem('socialUser');
+if (saved) {
+  currentUser = JSON.parse(saved);
+  document.getElementById('withdraw-section').classList.remove('hidden');
+  loadBalance();
+  loadHistory();
+} else {
+  document.getElementById('login-prompt').classList.remove('hidden');
+}
+
+function updateContactLabel() {
+  const method = document.getElementById('wd-method').value;
+  const label = document.getElementById('wd-contact-label');
+  const input = document.getElementById('wd-contact');
+  if (method === 'moncash') { label.textContent = 'Votre numéro MonCash'; input.placeholder = '509XXXXXXXX'; }
+  else if (method === 'natcash') { label.textContent = 'Votre numéro NatCash'; input.placeholder = '509XXXXXXXX'; }
+  else if (method === 'zelle') { label.textContent = 'Votre email / numéro Zelle'; input.placeholder = 'email@example.com'; }
+  else if (method === 'mains_propres') { label.textContent = 'Votre adresse / lieu de remise'; input.placeholder = 'Rue Pavée, Port-au-Prince'; }
+  else { label.textContent = 'Votre contact'; input.placeholder = ''; }
+}
+
+async function loadBalance() {
+  try {
+    const res = await fetch(`/api/users?action=balance&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+    document.getElementById('balance-val').textContent = data.balance ?? 0;
+    currentUser.balance = data.balance ?? 0;
+  } catch {}
+}
+
+async function submitWithdraw() {
+  const alertEl = document.getElementById('wd-alert');
+  alertEl.innerHTML = '';
+
+  const amount = parseInt(document.getElementById('wd-amount').value);
+  const method = document.getElementById('wd-method').value;
+  const contact = document.getElementById('wd-contact').value.trim();
+  const ageCheck = document.getElementById('age-confirm');
+
+  if (!ageCheck.checked) {
+    alertEl.innerHTML = '<div class="alert alert-error">Vous devez confirmer avoir au moins 18 ans.</div>';
+    return;
+  }
+  if (!amount || amount <= 0) {
+    alertEl.innerHTML = '<div class="alert alert-error">Montant invalide.</div>';
+    return;
+  }
+  if (!method) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez choisir une méthode.</div>';
+    return;
+  }
+  if (!contact) {
+    alertEl.innerHTML = '<div class="alert alert-error">Veuillez renseigner votre contact.</div>';
+    return;
+  }
+  if (amount > (currentUser.balance ?? 0)) {
+    alertEl.innerHTML = '<div class="alert alert-error">Solde insuffisant.</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/withdrawals?action=submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, amount, method, contact })
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      alertEl.innerHTML = '<div class="alert alert-success">✅ Demande soumise ! Traitement sous 24h.</div>';
+      document.getElementById('wd-amount').value = '';
+      document.getElementById('wd-method').value = '';
+      document.getElementById('wd-contact').value = '';
+      ageCheck.checked = false;
+      loadBalance();
+      loadHistory();
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur.'}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau. Réessayez.</div>';
+  }
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`/api/withdrawals?action=list&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+    const el = document.getElementById('wd-history');
+    if (!data.length) { el.textContent = 'Aucune demande.'; return; }
+    el.innerHTML = data.map(w => {
+      const statusBadge = w.status === 'validated'
+        ? '<span class="badge badge-green">Validé</span>'
+        : w.status === 'refused'
+        ? '<span class="badge badge-red">Refusé</span>'
+        : '<span class="badge badge-muted">En attente</span>';
+      const methodLabel = { moncash:'MonCash', natcash:'NatCash', zelle:'Zelle', mains_propres:'Mains propres' }[w.method] || w.method;
+      return `<div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <strong style="color:var(--text)">${w.amount} GDS</strong>
+            <span style="color:var(--text-muted); font-size:0.82rem;"> via ${esc(methodLabel)}</span>
+          </div>
+          ${statusBadge}
+        </div>
+        <small style="color:var(--text-muted)">${fmtDate(w.createdAt)} — ⏱️ ${esc(w.delay)}</small>
+      </div>`;
+    }).join('');
+  } catch { document.getElementById('wd-history').textContent = 'Impossible de charger.'; }
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleString('fr-FR', { dateStyle:'short', timeStyle:'short' });
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

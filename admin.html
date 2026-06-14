@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.admin-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.tab-btn { padding:8px 16px; border-radius:20px; border:1px solid var(--card-border); background:transparent; color:var(--text-muted); cursor:pointer; font-family:inherit; font-size:0.82rem; font-weight:500; transition:all 0.2s; }
+.tab-btn.active, .tab-btn:hover { background:var(--blue-glow); border-color:var(--blue); color:var(--blue); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.rights-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; }
+.toggle { display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; }
+.toggle input { width:auto; }
+.pay-img { max-width:120px; max-height:80px; border-radius:8px; cursor:pointer; border:1px solid var(--card-border); object-fit:cover; }
+.img-modal { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:200; cursor:pointer; }
+.img-modal img { max-width:90vw; max-height:90vh; border-radius:12px; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html" class="active">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Panneau d'administration</p>
+</header>
+
+<main class="container">
+
+  <!-- LOGIN FORM -->
+  <div id="login-section" class="container-sm" style="margin:0 auto;">
+    <div class="card">
+      <h2 style="margin-bottom:20px; font-size:1.1rem; color:var(--blue);">🔐 Accès Administrateur</h2>
+      <div id="login-alert"></div>
+      <div class="form-group">
+        <label for="admin-pw">Mot de passe</label>
+        <input type="password" id="admin-pw" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary w-full" onclick="verifyAdmin()">Connexion Admin</button>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="admin-panel" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+      <h2 style="color:var(--blue);">🛠️ Panneau Admin</h2>
+      <button class="btn btn-secondary" onclick="logout()" style="padding:8px 18px; font-size:0.8rem;">Déconnexion</button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="tab-btn active" onclick="switchTab('contacts', this)">Contacts</button>
+      <button class="tab-btn" onclick="switchTab('users', this)">Utilisateurs</button>
+      <button class="tab-btn" onclick="switchTab('payments', this)">Paiements</button>
+      <button class="tab-btn" onclick="switchTab('withdrawals', this)">Retraits</button>
+      <button class="tab-btn" onclick="switchTab('addfunds', this)">+ Fonds</button>
+      <button class="tab-btn" onclick="switchTab('resetpw', this)">Reset MDP</button>
+      <button class="tab-btn" onclick="switchTab('messages', this)">Messages</button>
+      <button class="tab-btn" onclick="switchTab('spins', this)">Spins</button>
+      <button class="tab-btn" onclick="switchTab('links', this)">Liens</button>
+    </div>
+
+    <!-- CONTACTS TAB -->
+    <div id="tab-contacts" class="tab-panel active card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="color:var(--blue); font-size:0.95rem;">📋 Contacts (<span id="contacts-count">0</span>)</h3>
+        <button class="btn btn-secondary" style="padding:8px 14px; font-size:0.78rem;" onclick="exportVCF()">📤 Export VCF</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>#</th><th>Nom</th><th>Téléphone</th><th>Pays</th><th>Date</th></tr></thead>
+        <tbody id="contacts-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div id="tab-users" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">👥 Utilisateurs (<span id="users-count">0</span>)</h3>
+      <div id="users-list"></div>
+    </div>
+
+    <!-- PAYMENTS TAB -->
+    <div id="tab-payments" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">💳 Paiements en attente</h3>
+      <div id="payments-list">Chargement...</div>
+    </div>
+
+    <!-- WITHDRAWALS TAB -->
+    <div id="tab-withdrawals" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">💸 Demandes de retrait</h3>
+      <div id="withdrawals-list">Chargement...</div>
+    </div>
+
+    <!-- ADD FUNDS TAB -->
+    <div id="tab-addfunds" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">💰 Ajouter des fonds manuellement</h3>
+      <div id="addfunds-alert"></div>
+      <div class="form-group">
+        <label>Nom d'utilisateur</label>
+        <input type="text" id="funds-username" placeholder="mon_pseudo">
+      </div>
+      <div class="form-group">
+        <label>Montant (GDS)</label>
+        <input type="number" id="funds-amount" placeholder="500" min="1">
+      </div>
+      <button class="btn btn-primary" onclick="addFunds()">💰 Ajouter les fonds</button>
+    </div>
+
+    <!-- RESET PASSWORD TAB -->
+    <div id="tab-resetpw" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">🔑 Réinitialiser un mot de passe</h3>
+      <div id="resetpw-alert"></div>
+      <div class="form-group">
+        <label>Nom d'utilisateur</label>
+        <input type="text" id="resetpw-username" placeholder="mon_pseudo">
+      </div>
+      <div class="form-group">
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="resetpw-newpw" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="adminResetPw()">🔄 Réinitialiser</button>
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div id="tab-messages" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">💬 Conversations</h3>
+      <div class="table-wrap">
+        <table><thead><tr><th>De</th><th>À</th><th>Message</th><th>Type</th><th>Date</th></tr></thead>
+        <tbody id="messages-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- SPINS TAB -->
+    <div id="tab-spins" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">🎰 Historique Spins</h3>
+      <div class="table-wrap">
+        <table><thead><tr><th>Utilisateur</th><th>Résultat</th><th>Montant</th><th>Date</th></tr></thead>
+        <tbody id="spins-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- LINKS TAB -->
+    <div id="tab-links" class="tab-panel card">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:16px;">🔗 Liens Sociaux</h3>
+      <div class="table-wrap">
+        <table><thead><tr><th>Plateforme</th><th>URL</th><th>Utilisateur</th><th>Date</th></tr></thead>
+        <tbody id="links-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Image modal -->
+<div id="img-modal" class="img-modal hidden" onclick="this.classList.add('hidden')">
+  <img id="img-modal-src" src="" alt="Screenshot">
+</div>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+let adminContacts = [], adminUsers = [];
+
+async function verifyAdmin() {
+  const pw = document.getElementById('admin-pw').value;
+  const alertEl = document.getElementById('login-alert');
+  try {
+    const res = await fetch('/api/admin?action=verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      sessionStorage.setItem('adminOk', '1');
+      showPanel();
+    } else {
+      alertEl.innerHTML = '<div class="alert alert-error">❌ Mot de passe incorrect.</div>';
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('adminOk');
+  location.reload();
+}
+
+function showPanel() {
+  document.getElementById('login-section').classList.add('hidden');
+  document.getElementById('admin-panel').classList.remove('hidden');
+  loadAllData();
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleString('fr-FR', { dateStyle:'short', timeStyle:'short' });
+}
+
+async function loadAllData() {
+  try {
+    const [cRes, uRes, mRes, sRes, lRes, pRes, wRes] = await Promise.all([
+      fetch('/api/admin?action=contacts'),
+      fetch('/api/admin?action=users'),
+      fetch('/api/admin?action=messages'),
+      fetch('/api/admin?action=spins'),
+      fetch('/api/admin?action=links'),
+      fetch('/api/admin?action=payments'),
+      fetch('/api/admin?action=withdrawals'),
+    ]);
+    adminContacts = await cRes.json();
+    adminUsers = await uRes.json();
+    const msgs = await mRes.json();
+    const spinsData = await sRes.json();
+    const linksData = await lRes.json();
+    const paymentsData = await pRes.json();
+    const withdrawalsData = await wRes.json();
+
+    // Contacts
+    document.getElementById('contacts-count').textContent = adminContacts.length;
+    document.getElementById('contacts-tbody').innerHTML = adminContacts.map((c, i) =>
+      `<tr><td>${i+1}</td><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.country)}</td><td>${fmtDate(c.createdAt)}</td></tr>`
+    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Aucun contact</td></tr>';
+
+    // Users
+    document.getElementById('users-count').textContent = adminUsers.length;
+    document.getElementById('users-list').innerHTML = adminUsers.map(u =>
+      `<div class="rights-row">
+        <div style="flex:1; min-width:140px;">
+          <strong>${esc(u.username)}</strong>
+          ${u.isStopped ? '<span class="badge badge-red" style="margin-left:6px">STOPPÉ</span>' : ''}
+          <br>
+          <small style="color:var(--text-muted)">${esc(u.name)} — ${esc(u.phone)}</small><br>
+          <small style="color:var(--text-muted)">Solde: <strong style="color:var(--blue)">${u.balance} GDS</strong></small>
+        </div>
+        <label class="toggle"><input type="checkbox" ${u.canUseVoice ? 'checked':''} onchange="updateRights('${esc(u.username)}', this.checked, ${u.canUseImage})"> 🎤 Vocal</label>
+        <label class="toggle"><input type="checkbox" ${u.canUseImage ? 'checked':''} onchange="updateRights('${esc(u.username)}', ${u.canUseVoice}, this.checked)"> 🖼️ Image</label>
+        <button class="btn ${u.isStopped ? 'btn-success' : 'btn-danger'}" style="padding:6px 14px; font-size:0.78rem;" onclick="toggleStopPin('${esc(u.username)}', ${!u.isStopped})">
+          ${u.isStopped ? '▶️ Réactiver' : '🛑 Stop PIN'}
+        </button>
+      </div>`
+    ).join('') || '<p style="color:var(--text-muted)">Aucun utilisateur</p>';
+
+    // Payments
+    renderPayments(paymentsData);
+
+    // Withdrawals
+    renderWithdrawals(withdrawalsData);
+
+    // Messages
+    document.getElementById('messages-tbody').innerHTML = msgs.map(m =>
+      `<tr><td>${esc(m.fromUser)}</td><td>${esc(m.toUser)}</td><td>${esc(m.message.substring(0,60))}</td><td>${m.type||'text'}</td><td>${fmtDate(m.createdAt)}</td></tr>`
+    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Aucun message</td></tr>';
+
+    // Spins
+    document.getElementById('spins-tbody').innerHTML = spinsData.map(s =>
+      `<tr><td>${esc(s.username)}</td><td>${esc(s.resultType)}</td><td>${s.amount > 0 ? s.amount + ' GDS' : '-'}</td><td>${fmtDate(s.createdAt)}</td></tr>`
+    ).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Aucun spin</td></tr>';
+
+    // Links
+    document.getElementById('links-tbody').innerHTML = linksData.map(l =>
+      `<tr><td>${esc(l.platform)}</td><td><a href="${esc(l.url)}" target="_blank" style="color:var(--blue)">${esc(l.url.substring(0,40))}</a></td><td>${esc(l.username||'-')}</td><td>${fmtDate(l.createdAt)}</td></tr>`
+    ).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Aucun lien</td></tr>';
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderPayments(paymentsData) {
+  const el = document.getElementById('payments-list');
+  if (!paymentsData.length) { el.innerHTML = '<p style="color:var(--text-muted)">Aucun paiement soumis.</p>'; return; }
+  el.innerHTML = paymentsData.map(p => {
+    const statusBadge = p.status === 'approved'
+      ? `<span class="badge badge-green">Approuvé${p.approvedAmount ? ' — ' + p.approvedAmount + ' GDS' : ''}</span>`
+      : p.status === 'refused'
+      ? '<span class="badge badge-red">Refusé</span>'
+      : '<span class="badge badge-muted">En attente</span>';
+    const imgPreview = p.imageData
+      ? `<img class="pay-img" src="${p.imageData}" alt="Screenshot" onclick="openImg('${encodeURIComponent(p.imageData)}')">`
+      : '<span style="color:var(--text-muted); font-size:0.8rem;">Pas d\'image</span>';
+    const actionBtns = p.status === 'pending' ? `
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+        <input type="number" id="amt-${p.id}" placeholder="Montant GDS" min="1" style="width:130px; padding:6px 10px; font-size:0.82rem;">
+        <button class="btn btn-success" style="padding:6px 14px; font-size:0.78rem;" onclick="approvePayment(${p.id}, '${esc(p.username)}')">✅ Approuver</button>
+        <button class="btn btn-danger" style="padding:6px 14px; font-size:0.78rem;" onclick="refusePayment(${p.id})">❌ Refuser</button>
+      </div>` : '';
+    return `<div style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+          <strong style="color:var(--text)">${esc(p.username)}</strong>
+          <small style="color:var(--text-muted); margin-left:8px;">${fmtDate(p.createdAt)}</small><br>
+          ${statusBadge}
+        </div>
+        ${imgPreview}
+      </div>
+      ${actionBtns}
+    </div>`;
+  }).join('');
+}
+
+function renderWithdrawals(withdrawalsData) {
+  const el = document.getElementById('withdrawals-list');
+  if (!withdrawalsData.length) { el.innerHTML = '<p style="color:var(--text-muted)">Aucune demande de retrait.</p>'; return; }
+  const methodLabel = { moncash:'MonCash', natcash:'NatCash', zelle:'Zelle', mains_propres:'Mains propres' };
+  el.innerHTML = withdrawalsData.map(w => {
+    const statusBadge = w.status === 'validated'
+      ? '<span class="badge badge-green">Validé</span>'
+      : w.status === 'refused'
+      ? '<span class="badge badge-red">Refusé</span>'
+      : '<span class="badge badge-muted">En attente</span>';
+    const actionBtns = w.status === 'pending' ? `
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="btn btn-success" style="padding:6px 14px; font-size:0.78rem;" onclick="validateWithdrawal(${w.id})">✅ Valider</button>
+        <button class="btn btn-danger" style="padding:6px 14px; font-size:0.78rem;" onclick="refuseWithdrawal(${w.id})">❌ Refuser</button>
+      </div>` : '';
+    return `<div style="padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <strong style="color:var(--text)">${esc(w.username)}</strong> —
+          <strong style="color:var(--blue)">${w.amount} GDS</strong>
+          via <span style="color:var(--text-muted)">${esc(methodLabel[w.method] || w.method)}</span>
+          <br>
+          <small style="color:var(--text-muted)">Contact: ${esc(w.contact)} — ${fmtDate(w.createdAt)} — ⏱️ ${esc(w.delay)}</small>
+        </div>
+        ${statusBadge}
+      </div>
+      ${actionBtns}
+    </div>`;
+  }).join('');
+}
+
+async function approvePayment(id, username) {
+  const amtInput = document.getElementById('amt-' + id);
+  const amount = parseInt(amtInput?.value);
+  if (!amount || amount <= 0) { alert('Entrez un montant valide.'); return; }
+  const res = await fetch('/api/admin?action=approve-payment', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, amount })
+  });
+  const data = await res.json();
+  if (data.ok) { alert(`Paiement approuvé ! ${amount} GDS crédités à ${username}.`); loadAllData(); }
+  else alert(data.error || 'Erreur.');
+}
+
+async function refusePayment(id) {
+  if (!confirm('Refuser ce paiement ?')) return;
+  await fetch('/api/admin?action=refuse-payment', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  loadAllData();
+}
+
+async function validateWithdrawal(id) {
+  if (!confirm('Valider ce retrait et débiter le solde ?')) return;
+  const res = await fetch('/api/admin?action=validate-withdrawal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  const data = await res.json();
+  if (data.ok) { alert('Retrait validé !'); loadAllData(); }
+  else alert(data.error || 'Erreur.');
+}
+
+async function refuseWithdrawal(id) {
+  if (!confirm('Refuser cette demande de retrait ?')) return;
+  await fetch('/api/admin?action=refuse-withdrawal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  loadAllData();
+}
+
+async function addFunds() {
+  const alertEl = document.getElementById('addfunds-alert');
+  const username = document.getElementById('funds-username').value.trim();
+  const amount = parseInt(document.getElementById('funds-amount').value);
+  if (!username || !amount || amount <= 0) {
+    alertEl.innerHTML = '<div class="alert alert-error">Username et montant requis.</div>';
+    return;
+  }
+  const res = await fetch('/api/admin?action=add-funds', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, amount })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    alertEl.innerHTML = `<div class="alert alert-success">✅ ${amount} GDS ajoutés à ${esc(username)}. Nouveau solde : ${data.balance} GDS.</div>`;
+    document.getElementById('funds-username').value = '';
+    document.getElementById('funds-amount').value = '';
+    loadAllData();
+  } else {
+    alertEl.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur.'}</div>`;
+  }
+}
+
+async function adminResetPw() {
+  const alertEl = document.getElementById('resetpw-alert');
+  const username = document.getElementById('resetpw-username').value.trim();
+  const newPassword = document.getElementById('resetpw-newpw').value;
+  if (!username || !newPassword) {
+    alertEl.innerHTML = '<div class="alert alert-error">Username et nouveau mot de passe requis.</div>';
+    return;
+  }
+  const res = await fetch('/api/admin?action=reset-password', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, newPassword })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    alertEl.innerHTML = `<div class="alert alert-success">✅ Mot de passe de ${esc(username)} réinitialisé.</div>`;
+    document.getElementById('resetpw-username').value = '';
+    document.getElementById('resetpw-newpw').value = '';
+  } else {
+    alertEl.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur.'}</div>`;
+  }
+}
+
+async function toggleStopPin(username, stop) {
+  const action = stop ? 'Stopper' : 'Réactiver';
+  if (!confirm(`${action} le compte de ${username} ?`)) return;
+  const res = await fetch('/api/admin?action=stop-pin', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, stop })
+  });
+  const data = await res.json();
+  if (data.ok) { loadAllData(); }
+  else alert(data.error || 'Erreur.');
+}
+
+async function updateRights(username, canUseVoice, canUseImage) {
+  await fetch('/api/admin?action=update-user-rights', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, canUseVoice, canUseImage })
+  });
+}
+
+function exportVCF() {
+  if (!adminContacts.length) return alert('Aucun contact à exporter.');
+  let vcf = '';
+  adminContacts.forEach(c => {
+    vcf += `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${c.name}\r\nTEL;TYPE=CELL:${c.phone}\r\nADR;TYPE=HOME:;;${c.country};;;;\r\nNOTE:Enregistré le ${fmtDate(c.createdAt)}\r\nEND:VCARD\r\n`;
+  });
+  const blob = new Blob([vcf], { type: 'text/vcard;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contacts_xgroupllc.vcf';
+  a.click();
+}
+
+function openImg(encodedSrc) {
+  const src = decodeURIComponent(encodedSrc);
+  document.getElementById('img-modal-src').src = src;
+  document.getElementById('img-modal').classList.remove('hidden');
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('admin-pw').addEventListener('keydown', e => { if (e.key === 'Enter') verifyAdmin(); });
+
+if (sessionStorage.getItem('adminOk') === '1') showPanel();
+</script>
+</body>
+</html>

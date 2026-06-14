@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav>
+  <a href="index.html" class="active">Accueil</a>
+  <a href="social.html">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Rejoignez la communauté — Enregistrez votre contact</p>
+</header>
+
+<main class="container-sm">
+  <div class="card">
+    <h2 style="margin-bottom:20px; font-size:1.2rem; color:var(--blue);">📋 Enregistrement de Contact</h2>
+
+    <div id="alert-box"></div>
+
+    <form id="contact-form">
+      <div class="form-group">
+        <label for="country">Pays</label>
+        <select id="country" required>
+          <option value="">-- Sélectionner un pays --</option>
+        </select>
+      </div>
+
+      <div class="form-group hidden" id="custom-country-group">
+        <label for="custom-country">Mon pays</label>
+        <input type="text" id="custom-country" placeholder="Entrez votre pays">
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Numéro WhatsApp</label>
+        <input type="tel" id="phone" placeholder="+50937081286" required>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Nom complet</label>
+        <input type="text" id="name" placeholder="Jean Dupont" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full">
+        💾 Enregistrer
+      </button>
+    </form>
+
+    <div id="success-msg" class="hidden mt-16">
+      <div class="alert alert-success">
+        ✅ Contact enregistré avec succès ! Merci de rejoindre la communauté.
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-16">
+    <h3 style="font-size:0.95rem; color:var(--blue); margin-bottom:12px;">📊 Derniers contacts</h3>
+    <div id="recent-list" style="font-size:0.82rem; color:var(--text-muted);">Chargement...</div>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+const COUNTRIES = [
+  "Afghanistan","Afrique du Sud","Albanie","Algérie","Allemagne","Andorre","Angola","Antigua-et-Barbuda",
+  "Arabie Saoudite","Argentine","Arménie","Australie","Autriche","Azerbaïdjan","Bahamas","Bahreïn",
+  "Bangladesh","Barbade","Bélarus","Belgique","Belize","Bénin","Bhoutan","Bolivie","Bosnie-Herzégovine",
+  "Botswana","Brésil","Brunei","Bulgarie","Burkina Faso","Burundi","Cabo Verde","Cambodge","Cameroun",
+  "Canada","Chili","Chine","Chypre","Colombie","Comores","Congo","Corée du Nord","Corée du Sud",
+  "Costa Rica","Côte d'Ivoire","Croatie","Cuba","Danemark","Djibouti","Dominique","Égypte",
+  "Émirats Arabes Unis","Équateur","Érythrée","Espagne","Estonie","Eswatini","Éthiopie","Fidji",
+  "Finlande","France","Gabon","Gambie","Géorgie","Ghana","Grèce","Grenade","Guatemala","Guinée",
+  "Guinée-Bissau","Guinée Équatoriale","Guyana","Haïti","Honduras","Hongrie","Inde","Indonésie",
+  "Irak","Iran","Irlande","Islande","Israël","Italie","Jamaïque","Japon","Jordanie","Kazakhstan",
+  "Kenya","Kirghizistan","Kiribati","Koweït","Laos","Lesotho","Lettonie","Liban","Liberia","Libye",
+  "Liechtenstein","Lituanie","Luxembourg","Madagascar","Malaisie","Malawi","Maldives","Mali","Malte",
+  "Maroc","Marshall","Mauritanie","Maurice","Mexique","Micronésie","Moldova","Monaco","Mongolie",
+  "Monténégro","Mozambique","Myanmar","Namibie","Nauru","Népal","Nicaragua","Niger","Nigéria",
+  "Norvège","Nouvelle-Zélande","Oman","Ouganda","Ouzbékistan","Pakistan","Palaos","Palestine",
+  "Panama","Papouasie-Nouvelle-Guinée","Paraguay","Pays-Bas","Pérou","Philippines","Pologne",
+  "Portugal","Qatar","République Centrafricaine","République Dominicaine","République Tchèque",
+  "Roumanie","Royaume-Uni","Russie","Rwanda","Saint-Kitts-et-Nevis","Saint-Marin","Saint-Vincent",
+  "Sainte-Lucie","Salomon","Salvador","Samoa","São Tomé-et-Príncipe","Sénégal","Serbie",
+  "Seychelles","Sierra Leone","Singapour","Slovaquie","Slovénie","Somalie","Soudan","Soudan du Sud",
+  "Sri Lanka","Suède","Suisse","Suriname","Syrie","Tadjikistan","Tanzanie","Tchad","Thaïlande",
+  "Timor-Leste","Togo","Tonga","Trinité-et-Tobago","Tunisie","Turkménistan","Turquie","Tuvalu",
+  "Ukraine","Uruguay","Vanuatu","Vatican","Venezuela","Viêt Nam","Yémen","Zambie","Zimbabwe",
+  "Mon pays n'est pas dans la liste"
+];
+
+const sel = document.getElementById('country');
+COUNTRIES.forEach(c => {
+  const o = document.createElement('option');
+  o.value = c;
+  o.textContent = c;
+  sel.appendChild(o);
+});
+
+sel.addEventListener('change', () => {
+  const grp = document.getElementById('custom-country-group');
+  const inp = document.getElementById('custom-country');
+  if (sel.value === "Mon pays n'est pas dans la liste") {
+    grp.classList.remove('hidden');
+    inp.required = true;
+  } else {
+    grp.classList.add('hidden');
+    inp.required = false;
+  }
+});
+
+document.getElementById('contact-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const alertBox = document.getElementById('alert-box');
+  alertBox.innerHTML = '';
+
+  let country = sel.value;
+  if (country === "Mon pays n'est pas dans la liste") {
+    country = document.getElementById('custom-country').value.trim();
+  }
+  const phone = document.getElementById('phone').value.trim();
+  const name = document.getElementById('name').value.trim();
+
+  if (!country || !phone || !name) {
+    alertBox.innerHTML = '<div class="alert alert-error">Veuillez remplir tous les champs.</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country, phone, name })
+    });
+    if (res.ok) {
+      document.getElementById('contact-form').reset();
+      document.getElementById('custom-country-group').classList.add('hidden');
+      document.getElementById('success-msg').classList.remove('hidden');
+      loadRecent();
+    } else {
+      const data = await res.json();
+      alertBox.innerHTML = `<div class="alert alert-error">${data.error || 'Erreur lors de l\'enregistrement.'}</div>`;
+    }
+  } catch {
+    alertBox.innerHTML = '<div class="alert alert-error">Erreur réseau. Réessayez.</div>';
+  }
+});
+
+async function loadRecent() {
+  try {
+    const res = await fetch('/api/contacts');
+    const data = await res.json();
+    const el = document.getElementById('recent-list');
+    if (!data.length) { el.textContent = 'Aucun contact pour l\'instant.'; return; }
+    const last5 = data.slice(-5).reverse();
+    el.innerHTML = last5.map(c =>
+      `<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <strong style="color:var(--text)">${c.name}</strong>
+        <span style="float:right; color:var(--blue)">${c.country}</span>
+        <br><small>${c.phone}</small>
+      </div>`
+    ).join('');
+  } catch { document.getElementById('recent-list').textContent = 'Impossible de charger.'; }
+}
+
+loadRecent();
+</script>
+</body>
+</html>

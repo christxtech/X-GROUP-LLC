@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réseau Social — XGROUP LLC</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.social-layout { display:grid; grid-template-columns:260px 1fr; gap:20px; align-items:start; }
+.user-list-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; cursor:pointer; transition:background 0.2s; border-bottom:1px solid rgba(255,255,255,0.05); }
+.user-list-item:hover, .user-list-item.active { background:var(--blue-glow); }
+.avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#0044aa,#00aaff); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; flex-shrink:0; }
+.chat-box { display:flex; flex-direction:column; height:460px; }
+.chat-messages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.msg { max-width:75%; padding:10px 14px; border-radius:14px; font-size:0.85rem; line-height:1.4; }
+.msg-out { align-self:flex-end; background:linear-gradient(135deg,var(--blue-dark),#003399); color:#fff; border-bottom-right-radius:4px; }
+.msg-in { align-self:flex-start; background:rgba(255,255,255,0.08); border:1px solid var(--card-border); border-bottom-left-radius:4px; }
+.msg small { display:block; font-size:0.7rem; opacity:0.6; margin-top:4px; }
+.chat-input { display:flex; gap:8px; padding:12px; border-top:1px solid var(--card-border); }
+.chat-input input { flex:1; }
+.profile-section { background:rgba(0,170,255,0.05); border-radius:12px; padding:16px; margin-top:16px; }
+@media (max-width:700px) { .social-layout { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="social.html" class="active">Réseau Social</a>
+  <a href="spin.html">Spin</a>
+  <a href="links.html">Liens</a>
+  <a href="payment.html">Paiement</a>
+  <a href="withdraw.html">Retrait</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<header class="site-header">
+  <h1>XGROUP LLC</h1>
+  <p>Réseau Social &amp; Messagerie</p>
+</header>
+
+<main class="container">
+
+  <!-- AUTH SECTION -->
+  <div id="auth-section">
+    <div class="grid-2">
+      <!-- LOGIN -->
+      <div class="card">
+        <h2 style="color:var(--blue); font-size:1.1rem; margin-bottom:16px;">🔑 Connexion</h2>
+        <div id="login-alert"></div>
+        <div class="form-group"><label>Nom d'utilisateur</label><input type="text" id="login-username" placeholder="mon_pseudo"></div>
+        <div class="form-group"><label>Mot de passe</label><input type="password" id="login-password" placeholder="••••••••"></div>
+        <button class="btn btn-primary w-full" onclick="login()">Se connecter</button>
+        <p style="text-align:center; margin-top:12px; font-size:0.82rem; color:var(--text-muted);">
+          <a href="reset.html" style="color:var(--blue);">Mot de passe oublié ?</a>
+        </p>
+      </div>
+      <!-- REGISTER -->
+      <div class="card">
+        <h2 style="color:var(--blue); font-size:1.1rem; margin-bottom:16px;">📝 Inscription</h2>
+        <div id="reg-alert"></div>
+        <div class="form-group"><label>Nom d'utilisateur</label><input type="text" id="reg-username" placeholder="mon_pseudo"></div>
+        <div class="form-group"><label>Numéro</label><input type="tel" id="reg-phone" placeholder="+509..."></div>
+        <div class="form-group"><label>Nom complet</label><input type="text" id="reg-name" placeholder="Jean Dupont"></div>
+        <div class="form-group"><label>Adresse exacte</label><input type="text" id="reg-address" placeholder="Rue Pavée, Port-au-Prince"></div>
+        <div class="form-group"><label>Mot de passe</label><input type="password" id="reg-password" placeholder="••••••••"></div>
+        <button class="btn btn-primary w-full" onclick="register()">Créer mon compte</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL SECTION -->
+  <div id="social-section" class="hidden">
+    <!-- PROFILE BAR -->
+    <div class="card mb-16" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div class="avatar" id="my-avatar">?</div>
+      <div style="flex:1">
+        <div style="font-weight:600;" id="my-display-name">—</div>
+        <div style="font-size:0.8rem; color:var(--text-muted);" id="my-username-disp">@—</div>
+        <div style="font-size:0.8rem; color:var(--blue);" id="my-balance-disp">Solde: — GDS</div>
+      </div>
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:0.78rem;" onclick="toggleProfile()">✏️ Profil</button>
+      <button class="btn btn-secondary" style="padding:8px 14px; font-size:0.78rem;" onclick="socialLogout()">Déconnexion</button>
+    </div>
+
+    <!-- PROFILE EDIT -->
+    <div id="profile-edit" class="card hidden mb-16">
+      <h3 style="color:var(--blue); font-size:0.95rem; margin-bottom:12px;">✏️ Modifier mon profil</h3>
+      <div id="profile-alert"></div>
+      <div class="form-group"><label>Nom complet</label><input type="text" id="edit-name"></div>
+      <div class="form-group"><label>Numéro</label><input type="tel" id="edit-phone"></div>
+      <div class="form-group"><label>Adresse</label><input type="text" id="edit-address"></div>
+      <button class="btn btn-primary" onclick="saveProfile()">💾 Sauvegarder</button>
+    </div>
+
+    <!-- SOCIAL LAYOUT -->
+    <div class="social-layout">
+      <!-- USER LIST -->
+      <div class="card" style="padding:16px;">
+        <h3 style="color:var(--blue); font-size:0.9rem; margin-bottom:12px;">👥 Utilisateurs</h3>
+        <div id="user-list">Chargement...</div>
+      </div>
+
+      <!-- CHAT -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div id="no-chat" style="display:flex; align-items:center; justify-content:center; height:300px; color:var(--text-muted); font-size:0.9rem;">
+          👈 Sélectionnez un utilisateur pour chatter
+        </div>
+        <div id="chat-container" class="hidden">
+          <div style="padding:14px 16px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.3);">
+            <div class="avatar" id="chat-avatar" style="width:34px;height:34px;font-size:0.85rem;">?</div>
+            <div>
+              <div style="font-weight:600; font-size:0.9rem;" id="chat-username-disp">—</div>
+              <div style="font-size:0.75rem; color:var(--blue);">En ligne</div>
+            </div>
+          </div>
+          <div class="chat-box">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input">
+              <input type="text" id="msg-input" placeholder="Écrire un message..." onkeydown="if(event.key==='Enter') sendMessage()">
+              <button class="btn btn-primary" style="padding:10px 16px;" onclick="sendMessage()">➤</button>
+              <button class="btn btn-secondary" style="padding:10px 14px;" onclick="sendVoice()" title="Message vocal">🎤</button>
+              <button class="btn btn-secondary" style="padding:10px 14px;" onclick="sendImage()" title="Envoyer image">🖼️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  WhatsApp : <a href="https://wa.me/50937081286">+50937081286</a>
+</footer>
+
+<script>
+let currentUser = null;
+let chatTarget = null;
+let chatInterval = null;
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtTime(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function login() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const alertEl = document.getElementById('login-alert');
+  try {
+    const res = await fetch('/api/users?action=login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser = data;
+      sessionStorage.setItem('socialUser', JSON.stringify(data));
+      showSocial();
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+  }
+}
+
+async function register() {
+  const username = document.getElementById('reg-username').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const name = document.getElementById('reg-name').value.trim();
+  const address = document.getElementById('reg-address').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const alertEl = document.getElementById('reg-alert');
+  if (!username || !phone || !name || !address || !password) {
+    alertEl.innerHTML = '<div class="alert alert-error">Tous les champs sont requis.</div>';
+    return;
+  }
+  try {
+    const res = await fetch('/api/users?action=register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, phone, name, address, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser = data;
+      sessionStorage.setItem('socialUser', JSON.stringify(data));
+      showSocial();
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+  }
+}
+
+function socialLogout() {
+  sessionStorage.removeItem('socialUser');
+  currentUser = null;
+  chatTarget = null;
+  if (chatInterval) clearInterval(chatInterval);
+  document.getElementById('auth-section').classList.remove('hidden');
+  document.getElementById('social-section').classList.add('hidden');
+}
+
+function showSocial() {
+  document.getElementById('auth-section').classList.add('hidden');
+  document.getElementById('social-section').classList.remove('hidden');
+  const av = currentUser.username.charAt(0).toUpperCase();
+  document.getElementById('my-avatar').textContent = av;
+  document.getElementById('my-display-name').textContent = currentUser.name;
+  document.getElementById('my-username-disp').textContent = '@' + currentUser.username;
+  document.getElementById('my-balance-disp').textContent = 'Solde: ' + (currentUser.balance || 0) + ' GDS';
+  // Pre-fill profile form
+  document.getElementById('edit-name').value = currentUser.name || '';
+  document.getElementById('edit-phone').value = currentUser.phone || '';
+  document.getElementById('edit-address').value = currentUser.address || '';
+  loadUsers();
+}
+
+function toggleProfile() {
+  document.getElementById('profile-edit').classList.toggle('hidden');
+}
+
+async function saveProfile() {
+  const name = document.getElementById('edit-name').value.trim();
+  const phone = document.getElementById('edit-phone').value.trim();
+  const address = document.getElementById('edit-address').value.trim();
+  const alertEl = document.getElementById('profile-alert');
+  try {
+    const res = await fetch('/api/users?action=update', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, name, phone, address })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser = { ...currentUser, ...data };
+      sessionStorage.setItem('socialUser', JSON.stringify(currentUser));
+      document.getElementById('my-display-name').textContent = currentUser.name;
+      alertEl.innerHTML = '<div class="alert alert-success">✅ Profil mis à jour.</div>';
+      setTimeout(() => { alertEl.innerHTML = ''; document.getElementById('profile-edit').classList.add('hidden'); }, 1500);
+    } else {
+      alertEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+    }
+  } catch {
+    alertEl.innerHTML = '<div class="alert alert-error">Erreur réseau.</div>';
+  }
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/api/users?action=list');
+    const users = await res.json();
+    const others = users.filter(u => u.username !== currentUser.username);
+    const el = document.getElementById('user-list');
+    if (!others.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">Aucun autre utilisateur.</p>'; return; }
+    el.innerHTML = others.map(u =>
+      `<div class="user-list-item" id="uitem-${esc(u.username)}" onclick="openChat('${esc(u.username)}', '${esc(u.name)}')">
+        <div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">${u.username.charAt(0).toUpperCase()}</div>
+        <div><div style="font-size:0.85rem;font-weight:500;">${esc(u.username)}</div><div style="font-size:0.75rem;color:var(--text-muted);">${esc(u.name)}</div></div>
+      </div>`
+    ).join('');
+  } catch { document.getElementById('user-list').innerHTML = '<p style="color:var(--danger)">Erreur de chargement.</p>'; }
+}
+
+function openChat(username, name) {
+  chatTarget = username;
+  document.querySelectorAll('.user-list-item').forEach(el => el.classList.remove('active'));
+  const item = document.getElementById('uitem-' + username);
+  if (item) item.classList.add('active');
+  document.getElementById('no-chat').classList.add('hidden');
+  document.getElementById('chat-container').classList.remove('hidden');
+  document.getElementById('chat-avatar').textContent = username.charAt(0).toUpperCase();
+  document.getElementById('chat-username-disp').textContent = username + ' (' + name + ')';
+  if (chatInterval) clearInterval(chatInterval);
+  loadMessages();
+  chatInterval = setInterval(loadMessages, 2000);
+}
+
+async function loadMessages() {
+  if (!chatTarget) return;
+  try {
+    const res = await fetch(`/api/messages?from=${encodeURIComponent(currentUser.username)}&to=${encodeURIComponent(chatTarget)}`);
+    const msgs = await res.json();
+    const el = document.getElementById('chat-messages');
+    const atBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 5;
+    el.innerHTML = msgs.map(m => {
+      const isOut = m.fromUser === currentUser.username;
+      let content = esc(m.message);
+      if (m.type === 'voice') content = `🎤 <em>Message vocal</em>`;
+      if (m.type === 'image') content = `🖼️ <em>Image: ${esc(m.message)}</em>`;
+      return `<div class="msg ${isOut ? 'msg-out' : 'msg-in'}">${content}<small>${fmtTime(m.createdAt)}</small></div>`;
+    }).join('');
+    if (atBottom || msgs.length === 0) el.scrollTop = el.scrollHeight;
+  } catch {}
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const message = input.value.trim();
+  if (!message || !chatTarget) return;
+  input.value = '';
+  await fetch('/api/messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: currentUser.username, to: chatTarget, message, type: 'text' })
+  });
+  loadMessages();
+}
+
+async function sendVoice() {
+  if (!currentUser.canUseVoice) {
+    alert('🔒 Fonction payante, contactez l\'admin via WhatsApp : +50937081286');
+    return;
+  }
+  const name = prompt('Nom du fichier vocal:');
+  if (!name) return;
+  await fetch('/api/messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: currentUser.username, to: chatTarget, message: name, type: 'voice' })
+  });
+  loadMessages();
+}
+
+async function sendImage() {
+  if (!currentUser.canUseImage) {
+    alert('🔒 Fonction payante, contactez l\'admin via WhatsApp : +50937081286');
+    return;
+  }
+  const name = prompt('Nom ou URL de l\'image:');
+  if (!name) return;
+  await fetch('/api/messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: currentUser.username, to: chatTarget, message: name, type: 'image' })
+  });
+  loadMessages();
+}
+
+// Restore session
+const saved = sessionStorage.getItem('socialUser');
+if (saved) { currentUser = JSON.parse(saved); showSocial(); }
+</script>
+</body>
+</html>
