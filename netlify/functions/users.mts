@@ -89,17 +89,26 @@ export default async (req: Request, context: any) => {
     return Response.json(updated);
   }
 
+  // CORRIGÉ : balance retourne aussi isStopped
   if (req.method === "GET" && action === "balance") {
     const username = url.searchParams.get("username");
     if (!username) return Response.json({ error: "username requis" }, { status: 400 });
-    const [user] = await db.select({ balance: users.balance }).from(users).where(eq(users.username, username));
-    return Response.json({ balance: user?.balance ?? 0 });
+    const [user] = await db
+      .select({ balance: users.balance, isStopped: users.isStopped })
+      .from(users)
+      .where(eq(users.username, username));
+    return Response.json({ balance: user?.balance ?? 0, isStopped: user?.isStopped ?? false });
   }
 
+  // CORRIGÉ : debit vérifie aussi isStopped
   if (req.method === "POST" && action === "debit") {
     const { username, amount } = await req.json();
-    const [user] = await db.select({ balance: users.balance }).from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select({ balance: users.balance, isStopped: users.isStopped })
+      .from(users)
+      .where(eq(users.username, username));
     if (!user) return Response.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    if (user.isStopped) return Response.json({ error: "Compte suspendu." }, { status: 403 });
     if ((user.balance ?? 0) < amount) {
       return Response.json({ error: "Solde insuffisant" }, { status: 400 });
     }
